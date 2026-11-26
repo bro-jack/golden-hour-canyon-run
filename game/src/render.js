@@ -125,14 +125,21 @@ export function createRender(canvas, seed, modeKey) {
     jet.rotation.y = -p.yaw;
     jet.rotation.x = -p.pitch;
     jet.rotation.z = p.bank;
-    const burner = jet.getObjectByName('burner');
+    // Twin afterburner flames (v9): scale each flame in place so they stay
+    // glued to their nozzles (scaling a shared group would drift them
+    // sideways off the nozzles).
+    const burners = [jet.getObjectByName('burnerL'), jet.getObjectByName('burnerR')].filter(Boolean);
     const light = jet.getObjectByName('burnerLight');
-    const s = 0.6 + p.throttle * 1.1 + (p.phase === 'takeoff' ? 0.3 : 0);
-    if (burner) {
-      burner.scale.set(s, s, 0.7 + p.throttle * 1.6);
-      burner.material.opacity = 0.35 + p.throttle * 0.55;
+    // v10: flame scale CAPPED — the old scale (up to 1.7 wide) blew the flame
+    // wider than the nozzle mouth (0.30), so it read as two pale eggs at the
+    // tail. Now max radius 0.20 × 0.95 = 0.19 < mouth 0.34. Light dimmed too:
+    // intensity 18 at the nozzle mouths blasted them pale yellow.
+    const s = Math.min(0.6 + p.throttle * 1.1 + (p.phase === 'takeoff' ? 0.3 : 0), 0.95);
+    for (const b of burners) {
+      b.scale.set(s, s, 0.7 + p.throttle * 0.9);
+      b.material.opacity = 0.3 + p.throttle * 0.4;
     }
-    if (light) light.intensity = 4 + p.throttle * 14;
+    if (light) light.intensity = 1.0 + p.throttle * 2.0;
     // Ring pulse: the next ring glows harder; passed rings go dim green.
     for (let i = 0; i < rings.length; i += 1) {
       const m = ringMeshes[i];
