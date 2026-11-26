@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Golden Hour Canyon Run</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1a0f08; font-family: "Segoe UI", system-ui, sans-serif; }
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #hud { position: fixed; inset: 0; pointer-events: none; color: #fff; user-select: none; }
+  .panel { background: linear-gradient(160deg, rgba(20,16,28,.82), rgba(20,16,28,.62)); border: 1px solid rgba(255,190,90,.45); border-radius: 12px; box-shadow: 0 6px 22px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.22); backdrop-filter: blur(2px); padding: 8px 12px; }
+  .label { font-size: 10px; letter-spacing: .18em; color: #ffb85c; font-weight: 700; }
+  .value { font-size: 30px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 2px 6px rgba(0,0,0,.7); }
+  .unit { font-size: 11px; color: #ffd9a0; font-weight: 600; }
+  #hud-tl { position: absolute; top: 12px; left: 12px; display: flex; gap: 10px; }
+  #hud-tr { position: absolute; top: 12px; right: 12px; display: flex; gap: 10px; text-align: right; }
+  #hud-bl { position: absolute; bottom: 12px; left: 12px; }
+  #hud-br { position: absolute; bottom: 12px; right: 12px; text-align: right; }
+  .bar { width: 190px; height: 12px; border-radius: 6px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); overflow: hidden; margin-top: 4px; }
+  .bar > div { height: 100%; border-radius: 6px; }
+  #throttle-fill { background: linear-gradient(90deg, #ffb347, #ff7847); width: 60%; }
+  #fuel-fill { background: linear-gradient(90deg, #37d67a, #a5e34d); width: 100%; }
+  #damage-fill { background: linear-gradient(90deg, #ffcf3f, #ff3b30); width: 0%; }
+  #compass { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 340px; text-align: center; }
+  #compass-strip { font-size: 15px; letter-spacing: .18em; color: #ffe1b0; font-weight: 700; text-shadow: 0 2px 5px rgba(0,0,0,.8); }
+  #next-ring { position: absolute; top: 96px; left: 50%; transform: translateX(-50%); text-align: center; font-size: 15px; font-weight: 800; color: #ffe9c4; text-shadow: 0 2px 6px rgba(0,0,0,.85); }
+  #next-ring .arrow { font-size: 26px; color: #ffb347; }
+  #message { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); text-align: center; font-size: 34px; font-weight: 900; color: #fff; text-shadow: 0 3px 14px rgba(0,0,0,.9), 0 0 30px rgba(255,150,40,.55); opacity: 0; transition: opacity .25s; }
+  #hint { position: absolute; bottom: 74px; left: 50%; transform: translateX(-50%); font-size: 13px; color: rgba(255,235,200,.92); text-shadow: 0 1px 4px rgba(0,0,0,.9); text-align: center; }
+  .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 40%, rgba(40,18,4,.22), rgba(8,4,2,.48)); pointer-events: auto; }
+  .card { max-width: 620px; margin: 16px; padding: 28px 34px; text-align: center; border-radius: 18px; background: linear-gradient(165deg, rgba(38,22,10,.92), rgba(16,10,18,.94)); border: 1px solid rgba(255,180,80,.55); box-shadow: 0 18px 60px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.18); color: #fff; }
+  .card h1 { margin: 0 0 4px; font-size: 44px; line-height: 1.02; letter-spacing: .01em; background: linear-gradient(180deg, #fff3d6, #ffb347); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 0 4px 24px rgba(255,140,30,.25); }
+  .card h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: .3em; color: #ffb85c; }
+  .card p { margin: 8px 0; font-size: 15px; line-height: 1.5; color: #ffe9c9; }
+  .card .keys { font-size: 13px; color: #ffd9a0; line-height: 1.9; }
+  .card .keys b { color: #fff; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.3); border-radius: 5px; padding: 1px 7px; margin: 0 1px; }
+  .mode-row { display: flex; gap: 10px; justify-content: center; margin: 14px 0 4px; }
+  .mode { flex: 1; padding: 10px 6px; border-radius: 10px; border: 1px solid rgba(255,190,90,.4); background: rgba(255,255,255,.06); cursor: pointer; }
+  .mode.sel { border-color: #ffb347; background: rgba(255,150,40,.22); box-shadow: 0 0 0 1px #ffb347, 0 4px 16px rgba(255,140,30,.35); }
+  .mode b { display: block; font-size: 14px; }
+  .mode span { font-size: 11px; color: #ffd9a0; }
+  .big-btn { display: inline-block; margin-top: 16px; padding: 12px 34px; font-size: 18px; font-weight: 800; letter-spacing: .06em; color: #231303; background: linear-gradient(180deg, #ffd27a, #ff9a2e); border: none; border-radius: 12px; cursor: pointer; box-shadow: 0 6px 22px rgba(255,140,30,.5), inset 0 1px 0 rgba(255,255,255,.7); }
+  .score-line { font-size: 17px; line-height: 1.8; color: #ffe9c9; text-align: left; display: inline-block; }
+  .score-line b { color: #fff; float: right; margin-left: 30px; }
+  .hidden { display: none !important; }
+  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+<canvas id="scene" aria-label="Golden Hour Canyon Run: fly the jet through the glowing rings and land on the desert runway"></canvas>
+<div id="hud">
+  <div id="hud-tl">
+    <div class="panel"><div class="label">ALTITUDE</div><div><span class="value" id="hud-alt">0</span> <span class="unit">FT</span></div></div>
+    <div class="panel"><div class="label">SPEED</div><div><span class="value" id="hud-spd">0</span> <span class="unit">KT</span></div></div>
+    <div class="panel"><div class="label">HEADING</div><div><span class="value" id="hud-hdg">360</span><span class="unit">°</span></div></div>
+  </div>
+  <div id="hud-tr">
+    <div class="panel"><div class="label">RINGS</div><div><span class="value" id="hud-rings">0/10</span></div></div>
+    <div class="panel"><div class="label">TIME</div><div><span class="value" id="hud-time">0:00</span></div></div>
+    <div class="panel"><div class="label">SCORE</div><div><span class="value" id="hud-score">0</span></div></div>
+  </div>
+  <div id="compass"><div class="panel"><div id="compass-strip">N &nbsp; 030 &nbsp; 060 &nbsp; E &nbsp; 120 &nbsp; 150 &nbsp; S</div></div></div>
+  <div id="next-ring"><span class="arrow" id="ring-arrow">▲</span> <span id="ring-text">NEXT RING 240m</span></div>
+  <div id="hud-bl">
+    <div class="panel"><div class="label">THROTTLE <span id="thr-pct" style="color:#fff">60%</span></div><div class="bar"><div id="throttle-fill"></div></div>
+    <div class="label" style="margin-top:8px">FUEL <span id="fuel-pct" style="color:#fff">100%</span></div><div class="bar"><div id="fuel-fill"></div></div></div>
+  </div>
+  <div id="hud-br">
+    <div class="panel"><div class="label">DAMAGE <span id="dmg-pct" style="color:#fff">0%</span></div><div class="bar"><div id="damage-fill"></div></div>
+    <div class="label" style="margin-top:8px">MODE</div><div style="font-size:15px;font-weight:800" id="hud-mode">CANYON RUN</div></div>
+  </div>
+  <div id="message"></div>
+  <div id="hint">W/S throttle &nbsp;·&nbsp; A/D bank &nbsp;·&nbsp; ↑/↓ pitch &nbsp;·&nbsp; mouse steer &nbsp;·&nbsp; Esc pause &nbsp;·&nbsp; M mute</div>
+</div>
+<div id="screen-title" class="screen">
+  <div class="card">
+    <h2>GOLDEN HOUR &nbsp;·&nbsp; DESERT CANYON</h2>
+    <h1>CANYON RUN</h1>
+    <p>Take off from the desert strip, thread <b>10 glowing rings</b> down the canyon at golden hour,
+    then bring her home on the far runway. Thread a ring dead-centre for a <b>+250 bonus</b>.
+    Watch your fuel — a dry tank over the mesas is a long walk.</p>
+    <div class="mode-row" id="mode-row">
+      <div class="mode sel" data-mode="run"><b>1 · CANYON RUN</b><span>10 rings, land it</span></div>
+      <div class="mode" data-mode="time"><b>2 · TIME TRIAL</b><span>10 rings, 2:30 limit</span></div>
+      <div class="mode" data-mode="precision"><b>3 · PRECISION</b><span>8 small rings, soft landing</span></div>
+    </div>
+    <p class="keys"><b>W</b>/<b>S</b> throttle &nbsp; <b>A</b>/<b>D</b> bank &nbsp; <b>↑</b>/<b>↓</b> pitch &nbsp; <b>mouse</b> steer &nbsp; <b>Esc</b> pause</p>
+    <button class="big-btn" id="btn-fly">TAKE OFF ▸</button>
+  </div>
+</div>
+<div id="screen-pause" class="screen hidden">
+  <div class="card"><h1>PAUSED</h1><p>Golden hour waits for no one — except right now.</p>
+  <button class="big-btn" id="btn-resume">RESUME ▸</button></div>
+</div>
+<div id="screen-win" class="screen hidden">
+  <div class="card"><h2>SORTIE COMPLETE</h2><h1>TOUCHDOWN!</h1>
+  <p id="win-sub">All rings flown, wheels on the desert runway.</p>
+  <div class="score-line" id="win-lines"></div><br>
+  <button class="big-btn" id="btn-again">FLY AGAIN ▸</button></div>
+</div>
+<div id="screen-crash" class="screen hidden">
+  <div class="card"><h2 id="crash-title">SORTIE LOST</h2><h1 id="crash-head">CRASHED</h1>
+  <p id="crash-sub">The canyon keeps what it catches.</p>
+  <button class="big-btn" id="btn-retry">TRY AGAIN ▸</button></div>
+</div>
+<p id="status" role="status" aria-live="polite"></p>
+<script type="importmap">{"imports": {"three": "./vendor/three.module.min.js"}}</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
